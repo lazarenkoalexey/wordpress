@@ -36,6 +36,10 @@ onAfterInstallAddon [nodeGroup:cp, id:cdn]:
       
 onAfterBindSSL: setupDomain
 
+onAfterScaleOut[nodeGroup:cp]:
+  - log: Set acme challenge redirect
+  - cmd [cp]: echo 'RewriteCond %{REQUEST_URI} .well-known/acme-challenge\nRewriteRule (.*) ${nodes.cp.master.url}/$1 [R,L]' >> /var/www/webroot/ROOT/.htaccess
+
 onInstall:
 
   - script: |
@@ -53,7 +57,7 @@ onInstall:
     
   - log: Set Node Display Name
   - setNodeDisplayName [cp]: AppServer
-
+  
   - creatUserDB
 
   - setupNode:
@@ -66,8 +70,12 @@ onInstall:
   - install-wordpress
   
   - if (${settings.mu-addon:false}): configure-MU
-    
+
+  - log: Set acme challenge redirect
+  - cmd [cp]: echo 'RewriteCond %{REQUEST_URI} .well-known/acme-challenge\nRewriteRule (.*) ${nodes.cp.master.url}/$1 [R,L]' >> /var/www/webroot/ROOT/.htaccess
+
   - if (${settings.le-addon:false}): 
+      - setupLEwebroot
       - install-LE-addon
       - setupDomain
 
@@ -86,6 +94,15 @@ actions:
       settings:
         customDomains: ${globals.DOMAIN}
         fallbackToX1: true
+        webroot: true
+        webrootPath: /var/www/webroot/ROOT
+
+  setupLEwebroot:
+    - cmd[cp]: |-
+        [ ! -d /var/lib/jelastic/keys/letsencrypt ] && mkdir -p /var/lib/jelastic/keys/letsencrypt;
+        echo "webroot=true" > /var/lib/jelastic/keys/letsencrypt/settings-custom;
+        echo "webrootPath=/var/www/webroot/ROOT" >> /var/lib/jelastic/keys/letsencrypt/settings-custom;
+      user: root
 
   setupDomain:
     - cmd[cp]: source /opt/letsencrypt/settings && echo $domain
@@ -128,7 +145,7 @@ actions:
 
   setupNode:
     - log: OPTIMIZATION
-    - install: https://raw.githubusercontent.com/jelastic/templates/master/config.jps?_r=${fn.random}
+    - install: https://raw.githubusercontent.com/jelastic-jps/templates/master/config.jps?_r=${fn.random}
       settings:
         targetGroup: cp
         targetNodes: ${this.nodeId}
