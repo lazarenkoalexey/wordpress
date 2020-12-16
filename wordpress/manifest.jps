@@ -73,6 +73,11 @@ onInstall:
 
   - log: Set acme challenge redirect
   - cmd [cp]: echo 'RewriteCond %{REQUEST_URI} .well-known/acme-challenge\nRewriteRule (.*) ${nodes.cp.master.url}/$1 [R,L]' >> /var/www/webroot/ROOT/.htaccess
+  - cmd[cp]: 
+      commands: |-
+        echo '${nodes.cp.master.address} master' >> /etc/hosts
+        jem service restart
+      user: root
 
   - if (${settings.le-addon:false}): 
       - setupLEwebroot
@@ -145,7 +150,7 @@ actions:
 
   setupNode:
     - log: OPTIMIZATION
-    - install: https://raw.githubusercontent.com/jelastic-jps/templates/master/config.jps?_r=${fn.random}
+    - install: https://raw.githubusercontent.com/lazarenkoalexey/templates/JE-56513/config.jps?_r=${fn.random}
       settings:
         targetGroup: cp
         targetNodes: ${this.nodeId}
