@@ -38,7 +38,12 @@ onAfterBindSSL: setupDomain
 
 onAfterScaleOut[nodeGroup:cp]:
   - log: Set acme challenge redirect
-  - cmd [cp]: echo 'RewriteCond %{REQUEST_URI} .well-known/acme-challenge\nRewriteRule (.*) ${nodes.cp.master.url}/$1 [R,L]' >> /var/www/webroot/ROOT/.htaccess
+  - cmd [cp]: grep -q "well-known/acme-challenge" /var/www/webroot/ROOT/.htaccess || { echo 'RewriteCond %{REQUEST_URI} .well-known/acme-challenge' >> /var/www/webroot/ROOT/.htaccess && echo 'RewriteRule (.*) ${nodes.cp.master.url}/$1 [R,L]' >> /var/www/webroot/ROOT/.htaccess; }
+  - cmd[cp]: 
+      commands: |-
+        echo '${nodes.cp.master.address} master' >> /etc/hosts
+        jem service restart
+      user: root
 
 onInstall:
 
@@ -57,7 +62,13 @@ onInstall:
     
   - log: Set Node Display Name
   - setNodeDisplayName [cp]: AppServer
-  
+
+  - cmd[cp]: 
+      commands: |-
+        echo '${nodes.cp.master.address} master' >> /etc/hosts
+        jem service restart
+      user: root
+
   - creatUserDB
 
   - setupNode:
@@ -72,12 +83,7 @@ onInstall:
   - if (${settings.mu-addon:false}): configure-MU
 
   - log: Set acme challenge redirect
-  - cmd [cp]: echo 'RewriteCond %{REQUEST_URI} .well-known/acme-challenge\nRewriteRule (.*) ${nodes.cp.master.url}/$1 [R,L]' >> /var/www/webroot/ROOT/.htaccess
-  - cmd[cp]: 
-      commands: |-
-        echo '${nodes.cp.master.address} master' >> /etc/hosts
-        jem service restart
-      user: root
+  - cmd [cp]: grep -q "well-known/acme-challenge" /var/www/webroot/ROOT/.htaccess || { echo 'RewriteCond %{REQUEST_URI} .well-known/acme-challenge' >> /var/www/webroot/ROOT/.htaccess && echo 'RewriteRule (.*) ${nodes.cp.master.url}/$1 [R,L]' >> /var/www/webroot/ROOT/.htaccess; }
 
   - if (${settings.le-addon:false}): 
       - setupLEwebroot
